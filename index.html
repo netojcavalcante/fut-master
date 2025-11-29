@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>FutMaster — v3.8 (Racha) - Sincronizado</title>
+<title>FutMaster — v3.9 (Racha) - Sincronizado</title>
 
 <style>
-/* style.css - FutMaster v3.8 (final) */
+/* style.css - FutMaster v3.9 (final) */
 :root{
   --bg1:#c9a85a; --bg2:#b8925a; --panel:#0b0b0b; --gold:#b8860b; --muted:#4b3d2a; --text-dark:#111; --card:#f3e7cf;
   font-family: Inter, system-ui, -apple-serif, "Segoe UI", Roboto, Arial, sans-serif;
@@ -46,32 +46,28 @@ button{background:var(--panel);color:var(--gold);border:2px solid var(--gold);pa
 .footer{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:10px;color:var(--muted)}
 .drag-over { outline: 3px dashed rgba(0,0,0,0.2); }
 
-/* --- 🌟 CORES DE STATUS 🌟 --- */
-.team-heading.status-playing-1 { 
-    font-weight:900; 
-    color: #fff;
-    background-color: #0b6623; /* Verde Forte */
-    padding: 3px 8px;
-    border-radius: 4px;
-} 
-.team-heading.status-playing-2 { 
-    font-weight:900; 
-    color: #fff;
-    background-color: #1e90ff; /* Azul Forte */
-    padding: 3px 8px;
-    border-radius: 4px;
-} 
-.team-heading.status-next { 
+/* --- 🌟 CORES DE STATUS (REVISADO v3.9) 🌟 --- */
+/* Amarelo para Times Jogando (A e B) */
+.team-heading.status-playing-yellow { 
     font-weight:900; 
     color: #111;
     background-color: #ffd700; /* Amarelo Forte */
     padding: 3px 8px;
     border-radius: 4px;
 } 
-.team-heading.status-waiting { 
+/* Azul para o Próximo Time (C) */
+.team-heading.status-next-blue { 
+    font-weight:900; 
+    color: #fff;
+    background-color: #1e90ff; /* Azul Forte */
+    padding: 3px 8px;
+    border-radius: 4px;
+} 
+/* Quase Branco/Cinza Claro para Times Aguardando */
+.team-heading.status-waiting-white { 
     font-weight:700; 
     color: #555;
-    background-color: #e0e0e0; /* Cinza Suave */
+    background-color: #f3f3f3; /* Cinza Suave (Quase Branco) */
     padding: 3px 8px;
     border-radius: 4px;
 } 
@@ -90,7 +86,7 @@ button{background:var(--panel);color:var(--gold);border:2px solid var(--gold);pa
   <div class="header">
     <div>
       <div class="title">FutMaster — Racha</div>
-      <div class="subtitle">v3.8 — Online / Colaborativo</div>
+      <div class="subtitle">v3.9 — Online / Colaborativo</div>
     </div>
     <div class="small">Status: <span id="firebaseStatus" style="font-weight:700">Conectando...</span></div>
   </div>
@@ -170,7 +166,7 @@ button{background:var(--panel);color:var(--gold);border:2px solid var(--gold);pa
   <div class="footer">
     <div class="small">Apito de estádio embutido (sintetizado). Mantenha a aba ativa no celular para garantir reprodução.</div>
     <div class="small">Sincronizado em tempo real com Firebase.</div>
-    <div style="font-weight:700;color:var(--gold)">FutMaster v3.8</div>
+    <div style="font-weight:700;color:var(--gold)">FutMaster v3.9</div>
   </div>
 </div>
 
@@ -178,15 +174,16 @@ button{background:var(--panel);color:var(--gold);border:2px solid var(--gold);pa
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
 <script>
-// app.js - FutMaster v3.8 (Limpeza de Debug e Otimização de Sync)
+// app.js - FutMaster v3.9 (Nova Lógica de Times e Novo Apito)
 
 // ----------------------------------------------------
 // A. CONFIGURAÇÃO FIREBASE
 // ----------------------------------------------------
 const firebaseConfig = {
+  // ATENÇÃO: SUBSTITUA OS VALORES ABAIXO PELOS REAIS DO SEU PROJETO FIREBASE
   apiKey: "AIzaSyAuKyiDOpKsq11iO0c7v8NvQYqVdbZr4Ko",
   authDomain: "futuriasmaster.firebaseapp.com",
-  databaseURL: "https://futuriasmaster-default-rtdb.firebaseio.com",
+  databaseURL: "https://futuriasmaster-default-rtdb.firebaseio.com", 
   projectId: "futuriasmaster",
   storageBucket: "futuriasmaster.firebasestorage.app",
   messagingSenderId: "698635901166",
@@ -216,7 +213,7 @@ let state = {
 let queueList, countQueue, teamsContainer, countTeams, paymentsList, timerDisplay, chkClearOnLoad, chkSound, firebaseStatus;
 
 // ----------------------------------------------------
-// C. FUNÇÃO DE APITO SINTETIZADO
+// C. FUNÇÃO DE APITO SINTETIZADO (Novo Som de Final de Jogo)
 // ----------------------------------------------------
 
 function playWhistleSound() {
@@ -226,20 +223,28 @@ function playWhistleSound() {
         const audioContext = new(window.AudioContext || window.webkitAudioContext)();
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
+        const now = audioContext.currentTime;
+
+        // Configuração para um som mais longo e dramático (3.5s)
+        const duration = 3.5; 
+        const startFreq = 880; // A5
+        const endFreq = 440; // A4 (ligeira queda no final)
 
         oscillator.type = 'square'; 
-        oscillator.frequency.setValueAtTime(1000, audioContext.currentTime); 
+        oscillator.frequency.setValueAtTime(startFreq, now); 
+        oscillator.frequency.linearRampToValueAtTime(endFreq, now + duration); 
 
-        gainNode.gain.setValueAtTime(0, audioContext.currentTime); 
-        gainNode.gain.linearRampToValueAtTime(0.6, audioContext.currentTime + 0.1); 
-        gainNode.gain.linearRampToValueAtTime(0.6, audioContext.currentTime + 1.5); 
-        gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 2.0); 
+        // Controle de Volume: Fade in e Fade out
+        gainNode.gain.setValueAtTime(0, now); 
+        gainNode.gain.linearRampToValueAtTime(0.6, now + 0.1); // Rápido fade in
+        gainNode.gain.linearRampToValueAtTime(0.6, now + duration - 0.2); // Sustenta
+        gainNode.gain.linearRampToValueAtTime(0, now + duration); // Fade out
 
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
 
-        oscillator.start();
-        oscillator.stop(audioContext.currentTime + 2.0); 
+        oscillator.start(now);
+        oscillator.stop(now + duration); 
 
     } catch (e) {
         console.warn('Web Audio API não suportada ou erro ao iniciar.');
@@ -381,19 +386,19 @@ function renderTeams() {
     let statusLabel = '',
       statusClass = '';
     
-    // --- LÓGICA DE STATUS VISUAL ---
+    // --- LÓGICA DE STATUS VISUAL (CUSTOMIZADA) ---
     if (tIndex === 0) {
       statusLabel = 'Jogando (Time A)';
-      statusClass = 'status-playing-1'; // VERDE
+      statusClass = 'status-playing-yellow'; // AMARELO
     } else if (tIndex === 1) {
       statusLabel = 'Jogando (Time B)';
-      statusClass = 'status-playing-2'; // AZUL
+      statusClass = 'status-playing-yellow'; // AMARELO
     } else if (tIndex === 2) {
       statusLabel = 'Próximo';
-      statusClass = 'status-next'; // AMARELO
+      statusClass = 'status-next-blue'; // AZUL
     } else {
       statusLabel = 'Aguardando';
-      statusClass = 'status-waiting'; // CINZA
+      statusClass = 'status-waiting-white'; // BRANCO/CINZA
     }
     // --- ------------------------------- ---
 
